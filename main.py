@@ -23,10 +23,8 @@ from src import (
     save_model
 )
 
-
 # Configuration
-
-DATA_PATH = "data/Neo-tanshinlactone compounds.csv"   # Input CSV
+DATA_PATH = "data/Neo-tanshinlactone_cytotoxicity.csv"   # Input CSV
 OUTPUT_DIR = "results"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 

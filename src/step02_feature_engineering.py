@@ -9,6 +9,7 @@ Created on Mon Oct 27 17:49:10 2025
 from rdkit import Chem
 from rdkit.Chem import Descriptors
 import pandas as pd
+import numpy as np
 
 def smiles_to_all_descriptors(df: pd.DataFrame, corr_threshold: float = 0.95) -> pd.DataFrame:
     """
