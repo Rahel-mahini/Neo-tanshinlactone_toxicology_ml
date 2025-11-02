@@ -4,10 +4,17 @@ import numpy as np
 import pandas as pd
 from itertools import combinations
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
-from sklearn.linear_model import MultiTaskLassoCV, MultiTaskElasticNetCV, MultiTaskLinearRegression
+from sklearn.linear_model import MultiTaskLassoCV, MultiTaskElasticNetCV, LinearRegression , Ridge
+from sklearn.multioutput import MultiOutputRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.neural_network import MLPRegressor
+from xgboost import XGBRegressor
+from sklearn.svm import SVR
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.model_selection import LeaveOneOut
 import mlflow
-import mlflow.sklearn
+
 
 # Function to compute LOO R2
 def loo_r2_score(model, X, y):
@@ -27,9 +34,18 @@ def run_multitask_models(X_train, X_test, y_train, y_test, selected_features):
 
     # Define multitask models
     models = {
-        "MultiTaskLinear": MultiTaskLinearRegression(),
+        "MultiTaskLinear": LinearRegression(),
         "MultiTaskLasso": MultiTaskLassoCV(cv=5),
-        "MultiTaskElasticNet": MultiTaskElasticNetCV(cv=5)
+        "MultiTaskElasticNet": MultiTaskElasticNetCV(cv=5), 
+        'Ridge' :MultiOutputRegressor(Ridge(random_state=42)),
+        'RandomForestRegressor' : MultiOutputRegressor(RandomForestRegressor(n_estimators=100, random_state=42)),
+        "GB": MultiOutputRegressor(GradientBoostingRegressor()),
+        "SVR": MultiOutputRegressor(SVR()),
+        "MLP": MultiOutputRegressor(MLPRegressor(hidden_layer_sizes=(50, 20), max_iter=500)),
+        'XGB':  MultiOutputRegressor(XGBRegressor(tree_method='hist', n_estimators=200)),
+        "DecisionTree": MultiOutputRegressor(DecisionTreeRegressor(random_state=42)),
+        "GaussianProcess": MultiOutputRegressor(GaussianProcessRegressor())
+
     }
 
     mlflow.set_experiment("Neo-tanshinlactone_MultitaskLR")
@@ -61,6 +77,10 @@ def run_multitask_models(X_train, X_test, y_train, y_test, selected_features):
                     # loo_r2 = loo_r2_score(model, X_train_sel, y_train)
                     loo_r2 = loo_r2_score(model, X_train_sel, y_train)
 
+                    # Safely access coef_ and intercept_ if available
+                    coef = getattr(model, "coef_", None)
+                    intercept = getattr(model, "intercept_", None)
+
                     # Store results
                     results_df = pd.concat([
                         results_df,
@@ -76,20 +96,25 @@ def run_multitask_models(X_train, X_test, y_train, y_test, selected_features):
                             'mse_test': [mse_test],
                             'rmse_train': [rmse_train],
                             'rmse_test': [rmse_test],
-                            'loo_r2': [loo_r2]
+                            'loo_r2': [loo_r2],
+                            'coefficient' : [coef],
+                            "intercept" : [intercept],
                         })
                     ], ignore_index=True)
 
-    # Sort by test R² and pick best model
+    # Sort by test R2 and pick best model
     results_df = results_df.sort_values(by='R2_test', ascending=False).reset_index(drop=True)
+    # results_df.to_csv(r'outputs/results_df.csv', index=False)
+
     top_model_row = results_df.iloc[0]
 
     top_model_name = top_model_row['model_name']
+
     top_features = list(top_model_row['descriptors'])
-    print(f"✅ Selected best model: {top_model_name} with features {top_features}")
+    print(f" Selected best model: {top_model_name} with features {top_features}")
 
     # Retrain best model on full training set
     best_model = models[top_model_name]
     best_model.fit(X_train[top_features], y_train)
 
-    return results_df, top_model_row, best_model
+    return results_df, top_model_row, best_model, top_model_name

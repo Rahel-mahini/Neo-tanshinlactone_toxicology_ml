@@ -2,7 +2,7 @@
 """
 Feature selection using Gentic Algorithm
 """
-# step04_feature_selection.py
+# step05_feature_selection.py
 from sklearn.linear_model import MultiTaskLasso
 from sklearn.feature_selection import RFE
 import pandas as pd
@@ -21,6 +21,15 @@ def run_mtlasso_rfe_per_target(X, Y, n_features_list=[1, 2, 3, 4]):
         Y = Y.to_frame()
     elif isinstance(Y, np.ndarray) and Y.ndim == 1:
         Y = Y.reshape(-1, 1)
+
+    print("X info:")
+    print(X.info())
+    print("Y info:")
+    print(Y.info())
+    print("X head:")
+    print(X.head())
+    print("Y head:")
+    print(Y.head())
 
     # Iterate over the number of features to select
     for n_features in n_features_list:

@@ -44,7 +44,7 @@ def smiles_to_all_descriptors(df: pd.DataFrame, corr_threshold: float = 0.95) ->
         return values
 
     # Compute all descriptors
-    descriptors = df['SMILES'].apply(calc_descriptors).tolist()
+    descriptors = df['SMILE'].apply(calc_descriptors).tolist()
     descriptor_df = pd.DataFrame(descriptors, columns=descriptor_names)
 
     # Drop descriptors that are all NaN
@@ -61,4 +61,8 @@ def smiles_to_all_descriptors(df: pd.DataFrame, corr_threshold: float = 0.95) ->
 
     # Merge descriptors with original dataframe
     result_df = pd.concat([df.reset_index(drop=True), descriptor_df], axis=1)
+    print ('result_df.head', result_df.head())
+    print ('result_df.shape', result_df.shape)
+    result_df.to_csv(r'outputs/descriptors_rdkit.csv', index=False)
+
     return result_df

@@ -5,23 +5,23 @@ numpy>=1.25
 # Machine learning
 scikit-learn>=1.3
 scipy>=1.11
+mlflow>=2.0.0
 
 
-# Multi-task and feature selection
-# MultiTaskLasso is part of scikit-learn, no extra package needed
-# RFE is part of scikit-learn
+
+# UMAP
+umap-learn>=0.5.5
 
 
 # Descriptor calculation
-rdkit-pypi>=2023.9.4
+rdkit-pypi>=2022.9.5
 
 # Model explainability
-alibi>=0.10.7
+alibi>=0.9.6
 
 # Plotting
 matplotlib>=3.8
 seaborn>=0.12
-alibi>=0.9.6
 
 
 # file operations

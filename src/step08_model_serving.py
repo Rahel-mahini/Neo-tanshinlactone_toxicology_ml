@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# step07_model_serving.py
+# step08_model_serving.py
 
 import pickle
 
