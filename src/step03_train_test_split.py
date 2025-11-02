@@ -3,23 +3,12 @@
 #step03_train_test_split.py
 
 
-# import pandas as pd
-# from sklearn.model_selection import train_test_split
 
-# def split_train_test(X: pd.DataFrame, y: pd.DataFrame, test_size=0.2, random_state=42):
-#     X_train, X_test, y_train, y_test = train_test_split(
-#         X, y, test_size=test_size, random_state=random_state
-#     )
-#     return X_train, X_test, y_train, y_test
-
-
-"""
-Cluster-based Train-Test Split using UMAP + KMeans + Gap Statistic
-"""
 
 import pandas as pd
 import numpy as np
 import random
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from scipy.cluster.hierarchy import linkage, fcluster
@@ -29,7 +18,21 @@ import umap
 from math import floor
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
+
+
+def split_train_test(X: pd.DataFrame, y: pd.DataFrame, test_size=0.2, random_state=42):
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=random_state
+    )
+    return X_train, X_test, y_train, y_test
+
+
+
+"""
+Cluster-based Train-Test Split using UMAP + KMeans + Gap Statistic
+"""
 
 # ---------------- Utility Functions ---------------- #
 
@@ -115,9 +118,12 @@ def cluster_based_train_test_split(data, descriptor_cols, target_cols, test_size
     reducer = umap.UMAP(n_neighbors=15, min_dist=0.1, n_components=2, random_state=random_state)
     embedding = reducer.fit_transform(scaled_data)
 
+    # # Convert embedding to DataFrame
+    umap_df = pd.DataFrame(embedding, columns=['UMAP_1', 'UMAP_2'])
+
     # --- Save UMAP embedding plot--- 
     plt.figure(figsize=(8, 6))
-    sns.scatterplot(x='UMAP_1', y='UMAP_2', alpha=0.7, s=50)
+    sns.scatterplot(data=umap_df, x='UMAP_1', y='UMAP_2', alpha=0.7, s=50)
     plt.title("UMAP Projection")
     plt.xlabel("UMAP 1")
     plt.ylabel("UMAP 2")
@@ -132,7 +138,6 @@ def cluster_based_train_test_split(data, descriptor_cols, target_cols, test_size
     cluster_labels = kmeans.fit_predict(embedding)
 
     data['Cluster'] = cluster_labels + 1
-    umap_df = pd.DataFrame(embedding, columns=['UMAP_1', 'UMAP_2'])
     umap_df['Cluster'] = cluster_labels + 1
 
     # --- Save KMeans cluster plot--- 

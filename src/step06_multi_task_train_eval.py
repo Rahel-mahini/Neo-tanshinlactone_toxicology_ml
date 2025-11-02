@@ -48,6 +48,9 @@ def run_multitask_models(X_train, X_test, y_train, y_test, selected_features):
 
     }
 
+    print("Columns in X_train:", X_train.columns.tolist())
+    print("Columns in combo:", selected_features)
+
     mlflow.set_experiment("Neo-tanshinlactone_MultitaskLR")
 
     with mlflow.start_run():

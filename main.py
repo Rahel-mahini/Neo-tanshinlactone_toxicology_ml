@@ -20,10 +20,12 @@ from src import (
     smiles_to_all_descriptors,
     normalize_features,
     run_mtlasso_rfe_per_target,   
+    multitask_xgb_feature_selection,
     run_multitask_models,   # multitask LR training/evaluation
     visualize_model,
     save_model, 
-    cluster_based_train_test_split
+    cluster_based_train_test_split, 
+   split_train_test
 )
 
 # Configuration
@@ -89,29 +91,32 @@ print("Step 4: Preprocessing data...")
 X_train_scaled, X_test_scaled = normalize_features(X_train, X_test)
 
 
-# 5. Feature Selection using MultiTaskLasso + RFE
-print(" Running MultiTaskLasso + RFE for feature selection...")
-best_features = run_mtlasso_rfe_per_target(X_train_scaled, y_train , n_features_list=[1, 2, 3, 4])
-print(" Best features per subset size (based on multitask target):")
-for n, feats in best_features.items():
-    print(f"  {n} features: {feats}")
+# 5. Feature Selection using MultiTaskLasso + RFE or  MultiTask xgb
+# print(" Running MultiTaskLasso + RFE for feature selection...")
+# final_features_df, final_features = run_mtlasso_rfe_per_target(X_train_scaled, y_train , n_features_list=[1, 2, 3, 4])
+
+print ('X_train.column',X_train.columns )  
+
+print(" Running MultiTask xgb for feature selection...")
+final_features_df, final_features  = multitask_xgb_feature_selection(X_train, y_train, top_n=20)
 
 # Save selected features
-pd.DataFrame.from_dict(best_features, orient='index').to_csv(FEATURES_PATH)
+final_features_df.to_csv(FEATURES_PATH)
+print("final features", final_features)
 
-# Use the largest subset (best 4 vars) for final multitask model
-selected_features = best_features[max(best_features.keys())]
-print ('selected_features' , selected_features)
+# # Use the largest subset (best 4 vars) for final multitask model
+# selected_features = best_features[max(best_features.keys())]
+# print ('selected_features' , selected_features)
 
 
 # Apply same selected features to both train/test sets
-X_train_selected = X_train_scaled[selected_features]
-X_test_selected = X_test_scaled[selected_features]
+X_train_selected = X_train_scaled[final_features]
+X_test_selected = X_test_scaled[final_features]
 
 
 # 6 Train Multitask Linear Regression (MCF-7 & SK-BR-3)
 print(" Training multitask linear regression model...")
-results_df, top_model_row, best_model, top_model_name = run_multitask_models(X_train, X_test, y_train, y_test, selected_features)
+results_df, top_model_row, best_model, top_model_name = run_multitask_models(X_train, X_test, y_train, y_test, final_features)
 print(" Training complete. Evaluation metrics:")
 print(results_df)
 
