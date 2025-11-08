@@ -19,13 +19,14 @@ from src import (
     load_data,
     smiles_to_all_descriptors,
     normalize_features,
-    run_mtlasso_rfe_per_target,   
-    multitask_xgb_feature_selection,
+    feature_selection_results,
     run_multitask_models,   # multitask LR training/evaluation
     visualize_model,
     save_model, 
     cluster_based_train_test_split, 
-   split_train_test
+    split_train_test, 
+    run_param_search_parallel
+  
 )
 
 # Configuration
@@ -90,19 +91,19 @@ print ('y_test', y_test)
 print("Step 4: Preprocessing data...")
 X_train_scaled, X_test_scaled = normalize_features(X_train, X_test)
 
-
 # 5. Feature Selection using MultiTaskLasso + RFE or  MultiTask xgb
 # print(" Running MultiTaskLasso + RFE for feature selection...")
-# final_features_df, final_features = run_mtlasso_rfe_per_target(X_train_scaled, y_train , n_features_list=[1, 2, 3, 4])
+# final_features_df, final_features = run_mtlasso_rfe_per_target(X_train_scaled, y_train , n_features=20)
 
-print ('X_train.column',X_train.columns )  
-
+print ('X_train.column', X_train.columns)
 print(" Running MultiTask xgb for feature selection...")
-final_features_df, final_features  = multitask_xgb_feature_selection(X_train, y_train, top_n=20)
+#final_features_df, final_features  = multitask_xgb_feature_selection(X_train, y_train, top_n=20)
+
+top_features_list , top_features_df = feature_selection_results(X_train_scaled,  y_train,  n_features=20, n_estimators=200, random_state=42)
 
 # Save selected features
-final_features_df.to_csv(FEATURES_PATH)
-print("final features", final_features)
+top_features_df.to_csv(FEATURES_PATH)
+print("final features", top_features_df)
 
 # # Use the largest subset (best 4 vars) for final multitask model
 # selected_features = best_features[max(best_features.keys())]
@@ -110,22 +111,76 @@ print("final features", final_features)
 
 
 # Apply same selected features to both train/test sets
-X_train_selected = X_train_scaled[final_features]
-X_test_selected = X_test_scaled[final_features]
+# X_train_selected = X_train_scaled[top_features_list]
+# X_test_selected = X_test_scaled[top_features_list]
 
 
 # 6 Train Multitask Linear Regression (MCF-7 & SK-BR-3)
 print(" Training multitask linear regression model...")
-results_df, top_model_row, best_model, top_model_name = run_multitask_models(X_train, X_test, y_train, y_test, final_features)
+results_df, top_model_row, best_model, top_model_name, top_features = run_multitask_models(X_train, X_test, y_train, y_test, top_features_list)
 print(" Training complete. Evaluation metrics:")
 print(results_df)
 
 
-# Step 7: Model visualiation & Plots  
+print("\n Pipeline finished successfully!")
+print(f" Model saved to: {MODEL_PATH}")
+print(f" Metrics saved to: {METRICS_PATH}")
+print(f" Selected features saved to: {FEATURES_PATH}")
+
+# 7 hyperparameter optimization 
+ # --- Define parameter grid ---
+# use_gpu = detect_gpu_support()
+# tree_method = "gpu_hist" if use_gpu else "hist"
+param_grid_xgb = {
+    "max_depth": [3, 5, 7, 9],
+    "min_child_weight": [1, 3, 5, 7],
+    "learning_rate": [0.01, 0.05, 0.1, 0.2],
+    "n_estimators": [200, 500, 1000],
+    "subsample": [0.6, 0.8, 1.0],
+    "colsample_bytree": [0.6, 0.8, 1.0],
+    "reg_alpha": [0, 0.01, 0.1, 1.0],
+    "reg_lambda": [0.1, 1.0, 10.0],
+    "gamma": [0, 0.1, 0.2, 0.5],
+    "booster": ["gbtree", "dart"],
+    "tree_method": "hist",
+    "random_state": [42],
+}
+
+param_grid_gb = {
+    "n_estimators": [100, 200, 500],
+    "learning_rate": [0.01, 0.05, 0.1],
+    "max_depth": [3, 5, 7],
+    "min_samples_split": [2, 5, 10],
+    "min_samples_leaf": [1, 2, 4],
+    "subsample": [0.6, 0.8, 1.0],
+    "max_features": ["sqrt", "log2", None],
+}
+
+
+X_train_selected = X_train_scaled[top_features]
+X_test_selected= X_test_scaled[top_features]
+
+results_df, top_model_row, best_model = run_param_search_parallel(X_train_selected, X_test_selected,
+                              y_train, y_test,
+                              param_grid_gb,
+                              n_jobs=-1,  # joblib parallel workers
+                              random_state=42,
+                              results_path=None,
+                              results_name="combination_para_opt_xgb.csv")
+
+# 8 Save model and metrics
+print(" Saving model and metrics...")
+save_model(best_model , MODEL_PATH)
+results_df.to_csv(METRICS_PATH, index=False)
+
+
+
+
+# Step 9: Model visualiation & Plots  
 print("Step 6: Evaluating models and generating plots...")
 
 SAVE_DIR = "outputs/plots"
-descriptor_cols = list(top_model_row.iloc[2])
+descriptor_cols = top_model_row["descriptors"].split(", ")
 
 visualize_model(
 X_train=X_train_selected[descriptor_cols],
@@ -138,14 +193,5 @@ target_names = target_columns,
 best_model_name=top_model_name,
 save_dir = SAVE_DIR,
 )
+
 print("Pipeline completed successfully.")
-
-# 8 Save model and metrics
-print(" Saving model and metrics...")
-save_model(best_model , MODEL_PATH)
-results_df.to_csv(METRICS_PATH, index=False)
-
-print("\n Pipeline finished successfully!")
-print(f" Model saved to: {MODEL_PATH}")
-print(f" Metrics saved to: {METRICS_PATH}")
-print(f" Selected features saved to: {FEATURES_PATH}")

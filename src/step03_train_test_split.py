@@ -127,7 +127,7 @@ def cluster_based_train_test_split(data, descriptor_cols, target_cols, test_size
     plt.title("UMAP Projection")
     plt.xlabel("UMAP 1")
     plt.ylabel("UMAP 2")
-    plt.savefig("output/plots/umap_embedding.png", dpi=300)
+    plt.savefig("outputs/plots/umap_embedding.png", dpi=300)
     plt.close()
 
     # --- Optimal number of clusters via Gap Statistic ---
@@ -148,7 +148,7 @@ def cluster_based_train_test_split(data, descriptor_cols, target_cols, test_size
     plt.xlabel("UMAP 1")
     plt.ylabel("UMAP 2")
     plt.legend(title="Cluster", bbox_to_anchor=(1.05, 1), loc="upper left")
-    plt.savefig("output/plots/umap_kmeans_clusters.png", dpi=300, bbox_inches='tight')
+    plt.savefig("outputs/plots/umap_kmeans_clusters.png", dpi=300, bbox_inches='tight')
     plt.close()
 
 

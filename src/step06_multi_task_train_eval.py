@@ -14,39 +14,76 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.model_selection import LeaveOneOut
 import mlflow
+from joblib import Parallel, delayed
 
 
-# Function to compute LOO R2
-def loo_r2_score(model, X, y):
-    loo = LeaveOneOut()
-    y_true, y_pred = [], []
-    for train_idx, test_idx in loo.split(X):
-        X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
-        y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
-        model.fit(X_train, y_train)
-        y_pred.append(model.predict(X_test)[0])
-        y_true.append(y_test.values[0])
-    return r2_score(y_true, y_pred)
+# ---- helper function for one model/combo ----
+def evaluate_model_combo(name, model, X_train, X_test, y_train, y_test, combo_safe, safe_to_orig):
+    """Train + evaluate one (model, feature combo) pair"""
+    X_train_sel = X_train[list(combo_safe)]
+    X_test_sel = X_test[list(combo_safe)]
 
+    model.fit(X_train_sel, y_train)
+    y_train_pred = model.predict(X_train_sel)
+    y_test_pred = model.predict(X_test_sel)
 
-def run_multitask_models(X_train, X_test, y_train, y_test, selected_features):
+    R2_train = r2_score(y_train, y_train_pred, multioutput='uniform_average')
+    R2_test = r2_score(y_test, y_test_pred, multioutput='uniform_average')
+    mae_train = mean_absolute_error(y_train, y_train_pred)
+    mae_test = mean_absolute_error(y_test, y_test_pred)
+    mse_train = mean_squared_error(y_train, y_train_pred)
+    mse_test = mean_squared_error(y_test, y_test_pred)
+    rmse_train = np.sqrt(mse_train)
+    rmse_test = np.sqrt(mse_test)
+
+    return pd.DataFrame({
+        'model_name': [name],
+        'num_features': [len(combo_safe)],
+        'descriptors': [[safe_to_orig[c] for c in combo_safe]],
+        'R2_train': [R2_train],
+        'R2_test': [R2_test],
+        'mae_train': [mae_train],
+        'mae_test': [mae_test],
+        'mse_train': [mse_train],
+        'mse_test': [mse_test],
+        'rmse_train': [rmse_train],
+        'rmse_test': [rmse_test],
+    })
+
+def clone_model(model):
+    """Safely clone MultiOutputRegressor or single-output models."""
+    if hasattr(model, 'estimator'):
+        base = model.estimator.__class__(**model.estimator.get_params())
+        return model.__class__(base)
+    else:
+        return model.__class__(**model.get_params())
+    
+# ---- main function ----
+def run_multitask_models(X_train, X_test, y_train, y_test, selected_features, n_jobs=-1):
     results_df = pd.DataFrame()
 
-    # Define multitask models
-    models = {
-        "MultiTaskLinear": LinearRegression(),
-        "MultiTaskLasso": MultiTaskLassoCV(cv=5),
-        "MultiTaskElasticNet": MultiTaskElasticNetCV(cv=5), 
-        'Ridge' :MultiOutputRegressor(Ridge(random_state=42)),
-        'RandomForestRegressor' : MultiOutputRegressor(RandomForestRegressor(n_estimators=100, random_state=42)),
-        "GB": MultiOutputRegressor(GradientBoostingRegressor()),
-        "SVR": MultiOutputRegressor(SVR()),
-        "MLP": MultiOutputRegressor(MLPRegressor(hidden_layer_sizes=(50, 20), max_iter=500)),
-        'XGB':  MultiOutputRegressor(XGBRegressor(tree_method='hist', n_estimators=200)),
-        "DecisionTree": MultiOutputRegressor(DecisionTreeRegressor(random_state=42)),
-        "GaussianProcess": MultiOutputRegressor(GaussianProcessRegressor())
+    # Safe column renaming for mlflow
+    orig_cols = X_train.columns.tolist()
+    safe_cols = [c.replace("[","\\").replace("]","\\")
+                    .replace("(","//").replace(")","//")
+                for c in orig_cols]
+    safe_to_orig = dict(zip(safe_cols, orig_cols))
 
+    X_train_safe = X_train.copy()
+    X_test_safe = X_test.copy()
+    X_train_safe.columns = safe_cols
+    X_test_safe.columns = safe_cols
+
+    safe_selected_features = [c.replace("[","\\").replace("]","\\")
+                                  .replace("(","//").replace(")","//") 
+                              for c in selected_features]
+
+        # Define multitask models
+    models = {  
+        "GB": MultiOutputRegressor(GradientBoostingRegressor()),
+   
     }
+
 
     print("Columns in X_train:", X_train.columns.tolist())
     print("Columns in combo:", selected_features)
@@ -54,65 +91,35 @@ def run_multitask_models(X_train, X_test, y_train, y_test, selected_features):
     mlflow.set_experiment("Neo-tanshinlactone_MultitaskLR")
 
     with mlflow.start_run():
-        # Loop over 1, 2, 3, and 4-feature combinations
-        for j in range(1, len(selected_features) + 1):
-            for combo in combinations(selected_features, j):
-                X_train_sel = X_train[list(combo)]
-                X_test_sel = X_test[list(combo)]
-
+        tasks = []
+        for j in range(1, 11):
+            for combo_safe in combinations(safe_selected_features, j):
                 for name, model in models.items():
-                    # Fit and predict
-                    model.fit(X_train_sel, y_train)
-                    y_train_pred = model.predict(X_train_sel)
-                    y_test_pred = model.predict(X_test_sel)
+                    tasks.append((name, model, combo_safe))
 
-                    # Compute metrics
-                    R2_train = r2_score(y_train, y_train_pred, multioutput='uniform_average')
-                    R2_test = r2_score(y_test, y_test_pred, multioutput='uniform_average')
-                    mae_train = mean_absolute_error(y_train, y_train_pred)
-                    mae_test = mean_absolute_error(y_test, y_test_pred)
-                    mse_train = mean_squared_error(y_train, y_train_pred)
-                    mse_test = mean_squared_error(y_test, y_test_pred)
-                    rmse_train = np.sqrt(mse_train)
-                    rmse_test = np.sqrt(mse_test)
+        # Parallel evaluation across tasks
+        results = Parallel(n_jobs=n_jobs, backend='loky')(
+            delayed(evaluate_model_combo)(
+                name,
+                clone_model(model),
+                X_train_safe,
+                X_test_safe,
+                y_train,
+                y_test,
+                combo_safe,
+                safe_to_orig
+            )
 
-                    # LOO R2 (optional, can be slow)
-                    # loo_r2 = loo_r2_score(model, X_train_sel, y_train)
-                    loo_r2 = loo_r2_score(model, X_train_sel, y_train)
+            for name, model, combo_safe in tasks
+        )
 
-                    # Safely access coef_ and intercept_ if available
-                    coef = getattr(model, "coef_", None)
-                    intercept = getattr(model, "intercept_", None)
+        results_df = pd.concat(results, ignore_index=True)
 
-                    # Store results
-                    results_df = pd.concat([
-                        results_df,
-                        pd.DataFrame({
-                            'model_name': [name],
-                            'num_features': [j],
-                            'descriptors': [combo],
-                            'R2_train': [R2_train],
-                            'R2_test': [R2_test],
-                            'mae_train': [mae_train],
-                            'mae_test': [mae_test],
-                            'mse_train': [mse_train],
-                            'mse_test': [mse_test],
-                            'rmse_train': [rmse_train],
-                            'rmse_test': [rmse_test],
-                            'loo_r2': [loo_r2],
-                            'coefficient' : [coef],
-                            "intercept" : [intercept],
-                        })
-                    ], ignore_index=True)
-
-    # Sort by test R2 and pick best model
+    # Sort and find best
     results_df = results_df.sort_values(by='R2_test', ascending=False).reset_index(drop=True)
-    # results_df.to_csv(r'outputs/results_df.csv', index=False)
-
+    results_df.to_csv(r'outputs/results_df.csv', index=False)
     top_model_row = results_df.iloc[0]
-
     top_model_name = top_model_row['model_name']
-
     top_features = list(top_model_row['descriptors'])
     print(f" Selected best model: {top_model_name} with features {top_features}")
 
@@ -120,4 +127,4 @@ def run_multitask_models(X_train, X_test, y_train, y_test, selected_features):
     best_model = models[top_model_name]
     best_model.fit(X_train[top_features], y_train)
 
-    return results_df, top_model_row, best_model, top_model_name
+    return results_df, top_model_row, best_model, top_model_name, top_features

@@ -21,28 +21,20 @@ The pipeline performs the following steps:
    - Split the dataset into `X_train`, `X_test`, `y_train`, and `y_test` using cluster-guided selection.
 
 4. **Feature selection**  
-   - Uses **MultiTaskLasso + Recursive Feature Elimination (RFE)** to select top features for all targets simultaneously.  
+   - Uses **MultiTaskLasso + Recursive Feature Elimination (RFE)** to select top 15 features for all targets simultaneously.  
+   - Uses **multi-task XGBoost model Feature Importance** to select top 15 features for all targets simultaneously.
    - Provides top 1–4 features for downstream modeling.
 
 5. **Train multi-task regression models**  
-   - Fits **multi-task linear regression** using the selected descriptors.  
+   - Fits **multi-task GradientBoosting regression** using the selected descriptors.  
    - Evaluates models using R², MAE, MSE, RMSE, and leave-one-out R² metrics.  
-   - Supports training with 1, 2, 3, up to 4 features combinations.
+   - Supports training with 1, 2, 3, up to 10 features combinations.
    - Supports the following models:
 
    ```python
    models = {
-       "MultiTaskLinear": LinearRegression(),
-       "MultiTaskLasso": MultiTaskLassoCV(cv=5),
-       "MultiTaskElasticNet": MultiTaskElasticNetCV(cv=5),
-       "Ridge": MultiOutputRegressor(Ridge(random_state=42)),
-       "RandomForestRegressor": MultiOutputRegressor(RandomForestRegressor(n_estimators=100, random_state=42)),
+    
        "GB": MultiOutputRegressor(GradientBoostingRegressor()),
-       "SVR": MultiOutputRegressor(SVR()),
-       "MLP": MultiOutputRegressor(MLPRegressor(hidden_layer_sizes=(50, 20), max_iter=500)),
-       "XGB": MultiOutputRegressor(XGBRegressor(tree_method='hist', n_estimators=200)),
-       "DecisionTree": MultiOutputRegressor(DecisionTreeRegressor(random_state=42)),
-       "GaussianProcess": MultiOutputRegressor(GaussianProcessRegressor())
    }
 
 6. **Save results**  
