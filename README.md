@@ -23,13 +23,12 @@ The pipeline performs the following steps:
 4. **Feature selection**  
    - Uses **MultiTaskLasso + Recursive Feature Elimination (RFE)** to select top 15 features for all targets simultaneously.  
    - Uses **multi-task XGBoost model Feature Importance** to select top 15 features for all targets simultaneously.
-   - Provides top 1–4 features for downstream modeling.
+   - Combine the features and provides top 30 features for downstream modeling.
 
 5. **Train multi-task regression models**  
    - Fits **multi-task GradientBoosting regression** using the selected descriptors.  
    - Evaluates models using R², MAE, MSE, RMSE, and leave-one-out R² metrics.  
    - Supports training with 1, 2, 3, up to 10 features combinations.
-   - Supports the following models:
 
    ```python
    models = {
@@ -52,7 +51,7 @@ The pipeline performs the following steps:
 
 ---
 
-## ⚙️ Installation
+## Installation
 
 1. Clone the repository:
 
