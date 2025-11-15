@@ -14,7 +14,7 @@ The pipeline performs the following steps:
 2. **Generate molecular descriptors**  
    Uses **RDKit** to compute all available molecular descriptors. Constant, NaN, or highly correlated descriptors are automatically removed.
 
-3. **UMAP-Cluster-Based Train/Test Split**  
+3. **Round-Robin Cluster Split Algorithm**  
    - Performs KMeans clustering on UMAP embeddings.  
    - Uses the **gap statistic** to determine the optimal number of clusters.  
    - Uses size-controlled hierarchical clustering  to recursively subcluster the larger size cluster from previous step.
