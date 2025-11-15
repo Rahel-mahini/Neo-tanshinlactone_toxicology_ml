@@ -159,7 +159,7 @@ def cluster_based_train_test_split(data, descriptor_cols, target_cols, test_size
     cluster_test_quotas = (cluster_sizes / total_samples * total_test_quota).round().astype(int)
     test_quota_dic = cluster_test_quotas.to_dict()
 
-    # --- Train/Test selection ---
+    # --- Train/Test selection using round-robin ---
     train_indices = []
     test_indices = []
     selected_test_set = set()

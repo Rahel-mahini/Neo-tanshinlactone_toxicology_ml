@@ -17,7 +17,8 @@ The pipeline performs the following steps:
 3. **UMAP-Cluster-Based Train/Test Split**  
    - Perform KMeans clustering on UMAP embeddings.  
    - Use the **gap statistic** to determine the optimal number of clusters.  
-   - Select test samples proportionally from each cluster, ensuring representative coverage.  
+   - Used size-controlled hierarchical clustering  to recursively subcluster the larger size cluster from previous step.
+   - Used Round & Robin distribution algorithm to select test samples proportionally from each cluster, ensuring representative coverage. 
    - Split the dataset into `X_train`, `X_test`, `y_train`, and `y_test` using cluster-guided selection.
 
 4. **Feature selection**  
@@ -36,7 +37,7 @@ The pipeline performs the following steps:
        "GB": MultiOutputRegressor(GradientBoostingRegressor()),
    }
 6. **Hyperparameter optimiation**
-   - After selecting the most informative descriptors, hyperparameter optimization was performed using our combination-based search procedure..
+   - After selecting the most informative descriptors, hyperparameter optimization was performed using our combination-based search procedure.
 
 7. **Save results**  
    - Trained model saved as `.pkl`.  
