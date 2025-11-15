@@ -15,11 +15,11 @@ The pipeline performs the following steps:
    Uses **RDKit** to compute all available molecular descriptors. Constant, NaN, or highly correlated descriptors are automatically removed.
 
 3. **UMAP-Cluster-Based Train/Test Split**  
-   - Perform KMeans clustering on UMAP embeddings.  
-   - Use the **gap statistic** to determine the optimal number of clusters.  
-   - Used size-controlled hierarchical clustering  to recursively subcluster the larger size cluster from previous step.
-   - Used Round & Robin distribution algorithm to select test samples proportionally from each cluster, ensuring representative coverage. 
-   - Split the dataset into `X_train`, `X_test`, `y_train`, and `y_test` using cluster-guided selection.
+   - Performs KMeans clustering on UMAP embeddings.  
+   - Uses the **gap statistic** to determine the optimal number of clusters.  
+   - Uses size-controlled hierarchical clustering  to recursively subcluster the larger size cluster from previous step.
+   - Uses Round & Robin distribution algorithm to select test samples proportionally from each cluster, ensuring representative coverage. 
+   - Splits the dataset into `X_train`, `X_test`, `y_train`, and `y_test` using cluster-guided selection.
 
 4. **Feature selection**  
    - Uses **MultiTaskLasso + Recursive Feature Elimination (RFE)** to select top 15 features for all targets simultaneously.  
