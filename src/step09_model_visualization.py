@@ -41,17 +41,32 @@ def visualize_model(X_train, X_test, y_train, y_train_pred, y_test, y_test_pred,
         y_train_np = np.array(y_train)
         y_train_pred_np = np.array(y_train_pred)
 
+        y_test_np = np.array(y_test)
+        y_test_pred_np = np.array(y_test_pred)
+
         for i in range(n_targets):
             plt.figure(figsize=(6, 5))
+
+             # Train: light blue
             plt.scatter(y_train_np[:, i], y_train_pred_np[:, i],
                         alpha=0.7, s=100, color='skyblue')
+            
+            # Test: darker blue
+            plt.scatter(
+                y_test_np[:, i], y_test_pred_np[:, i],
+                alpha=0.7, s=100, color='dodgerblue',
+                label='Test'
+            )
+
             plt.plot(
                 [y_train_np[:, i].min(), y_train_np[:, i].max()],
                 [y_train_np[:, i].min(), y_train_np[:, i].max()],
                 color='k', linestyle='--'
             )
-            r2 = r2_score(y_train_np[:, i], y_train_pred_np[:, i])
-            plt.title(f'{target_names[i]} (R²={r2:.3f})')
+            r2_train = r2_score(y_train_np[:, i], y_train_pred_np[:, i])
+            r2_test = r2_score(y_test_np[:, i], y_test_pred_np[:, i])
+            
+            plt.title(f'{target_names[i]} (Train R²={r2_train:.3f}, Test R²={r2_test:.3f})')
             plt.xlabel("Experimental")
             plt.ylabel("Predicted")
 
