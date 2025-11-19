@@ -96,7 +96,7 @@ def gap_statistic(data, max_k=10, n_references=5, random_state=42):
 
 # ---------------- Main Function ---------------- #
 
-def cluster_based_train_test_split(data, descriptor_cols, target_cols, test_size=0.2, random_state=42):
+def cluster_based_train_test_split(data, descriptor_cols, target_cols, test_size=0.2, max_k=10, n_references=10, random_state=42):
     """
     Performs cluster-based train-test split using UMAP + KMeans + Gap Statistic.
     

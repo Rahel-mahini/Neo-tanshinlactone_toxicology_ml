@@ -59,7 +59,7 @@ print(df_desc.head())
 
 #  Prepare Feature Matrix (X) and Targets (y)
 # Adjust column names to your dataset: 'Compound' and 'SMILE'
-descriptor_cols = [c for c in df_desc.columns if c not in ['Compound', 'SMILE' ] + target_columns]
+descriptor_cols = [c for c in df_desc.columns if c not in ['Compound', 'SMILE'] + target_columns]
 
 X = df_desc[descriptor_cols]
 y = df_desc[target_columns]
@@ -79,6 +79,8 @@ X_train, X_test, y_train, y_test = cluster_based_train_test_split(
         descriptor_cols=descriptor_cols,
         target_cols=target_columns,
         test_size=0.2,
+        max_k=10, 
+        n_references=10,
         random_state=42
     )
 
@@ -180,7 +182,7 @@ results_df.to_csv(METRICS_PATH, index=False)
 print("Step 6: Evaluating models and generating plots...")
 
 SAVE_DIR = "outputs/plots"
-descriptor_cols = top_model_row["descriptors"].split(", ")
+descriptor_cols = top_model_row["descriptors"].split(",")
 
 visualize_model(
 X_train=X_train_selected[descriptor_cols],
